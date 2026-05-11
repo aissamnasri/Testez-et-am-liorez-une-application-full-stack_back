@@ -133,3 +133,217 @@ Importez la collection Postman
 La documentation de Postman se trouve ici :
 
 https://learning.postman.com/docs/getting-started/importing-and-exporting-data/#importing-data-into-postman
+# Yoga App – Backend API
+
+API REST Spring Boot sécurisée par JWT pour la gestion de sessions de yoga (utilisateurs, enseignants, sessions, participations).
+
+---
+
+## Sommaire
+
+- [Prérequis](#prérequis)
+- [Installation et configuration](#installation-et-configuration)
+- [Lancer l'application](#lancer-lapplication)
+- [Lancer les tests](#lancer-les-tests)
+- [Générer le rapport de couverture](#générer-le-rapport-de-couverture)
+- [Structure des tests](#structure-des-tests)
+
+---
+
+## Prérequis
+
+| Outil | Version minimale |
+|---|---|
+| Java (JDK) | 17 |
+| Maven | 3.8+ (ou utiliser le wrapper `./mvnw`) |
+| MySQL | 8.0+ |
+
+---
+
+## Installation et configuration
+
+### 1. Cloner le dépôt
+
+```bash
+git clone <url-du-depot>
+cd <nom-du-dossier>
+```
+
+### 2. Créer la base de données MySQL
+
+Connectez-vous à MySQL et exécutez :
+
+```sql
+CREATE DATABASE yoga;
+```
+
+### 3. Configurer les accès à la base de données
+
+Ouvrez `src/main/resources/application.properties` et adaptez les valeurs selon votre environnement :
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/yoga?allowPublicKeyRetrieval=true
+spring.datasource.username=root
+spring.datasource.password=         # ← renseignez votre mot de passe
+```
+
+Les autres propriétés (JWT, Hibernate) sont déjà préconfigurées et n'ont pas besoin d'être modifiées pour un démarrage local.
+
+### 4. Compiler le projet
+
+```bash
+mvn clean install -DskipTests
+```
+
+---
+
+## Lancer l'application
+
+```bash
+mvn spring-boot:run
+```
+
+L'API est accessible à l'adresse : **http://localhost:8080**
+
+### Endpoints principaux
+
+| Méthode | Route | Accès | Description |
+|---|---|---|---|
+| POST | `/api/auth/register` | Public | Créer un compte |
+| POST | `/api/auth/login` | Public | S'authentifier, obtenir un JWT |
+| GET | `/api/session` | Authentifié | Lister les sessions |
+| GET | `/api/session/{id}` | Authentifié | Détail d'une session |
+| POST | `/api/session` | Authentifié | Créer une session |
+| PUT | `/api/session/{id}` | Authentifié | Modifier une session |
+| DELETE | `/api/session/{id}` | Authentifié | Supprimer une session |
+| POST | `/api/session/{id}/participate/{userId}` | Authentifié | S'inscrire à une session |
+| DELETE | `/api/session/{id}/participate/{userId}` | Authentifié | Se désinscrire |
+| GET | `/api/teacher` | Authentifié | Lister les enseignants |
+| GET | `/api/teacher/{id}` | Authentifié | Détail d'un enseignant |
+| GET | `/api/user/{id}` | Authentifié | Détail d'un utilisateur |
+| DELETE | `/api/user/{id}` | Propriétaire | Supprimer son compte |
+
+> Pour les routes authentifiées, ajoutez le header HTTP :
+> `Authorization: Bearer <votre_token_jwt>`
+
+---
+
+## Lancer les tests
+
+Les tests sont divisés en deux catégories :
+
+- **Tests unitaires** : isolés, rapides, sans base de données (Mockito)
+- **Tests d'intégration** (`*IT.java`) : démarrent un contexte Spring complet avec une base H2 en mémoire (profil `test`)
+
+### Lancer tous les tests
+
+```bash
+mvn test
+```
+
+### Lancer uniquement les tests unitaires
+
+```bash
+mvn test -Dtest="*Test"
+```
+
+### Lancer uniquement les tests d'intégration
+
+```bash
+mvn test -Dtest="*IT"
+```
+
+### Lancer les tests d'un package spécifique
+
+```bash
+# Tests des controllers
+mvn test -Dtest="com.openclassrooms.starterjwt.controller.*"
+
+# Tests des services
+mvn test -Dtest="com.openclassrooms.starterjwt.service.*"
+
+# Tests de la sécurité (JWT, filtres)
+mvn test -Dtest="com.openclassrooms.starterjwt.security.*"
+
+# Tests des mappers
+mvn test -Dtest="com.openclassrooms.starterjwt.mapper.*"
+```
+
+### Lancer une seule classe de test
+
+```bash
+mvn test -Dtest="SessionControllerIT"
+```
+
+> Les tests d'intégration utilisent automatiquement le profil `test` (`src/test/resources/application-test.properties`), qui pointe vers une base H2 en mémoire. **Aucune installation supplémentaire n'est nécessaire pour les faire tourner.**
+
+---
+
+## Générer le rapport de couverture
+
+Le projet utilise **JaCoCo** pour mesurer la couverture de code.
+
+### Générer le rapport complet
+
+```bash
+mvn clean verify
+```
+
+Cette commande exécute tous les tests **et** génère le rapport HTML.
+
+### Accéder au rapport
+
+Une fois la commande terminée, ouvrez le fichier suivant dans votre navigateur :
+
+```
+target/site/jacoco/index.html
+```
+
+Le rapport présente la couverture par :
+
+- **Package** — vue d'ensemble par couche (controller, service, mapper, security…)
+- **Classe** — détail classe par classe
+- **Méthode** — méthode par méthode
+- **Ligne** — avec coloration rouge (non couverte) / verte (couverte) / jaune (branche partielle)
+
+### Consulter le rapport en ligne de commande
+
+```bash
+# Résumé rapide dans le terminal après mvn verify
+mvn jacoco:report
+cat target/site/jacoco/index.html | grep -o 'Total[^<]*</td>' | head -5
+```
+
+---
+
+## Structure des tests
+
+```
+src/test/java/com/openclassrooms/starterjwt/
+│
+├── controller/
+│   ├── AbstractIntegrationTest.java       # Classe de base : contexte Spring + H2 + helpers JWT
+│   ├── AuthControllerTest.java            # Tests unitaires (@WebMvcTest) : login, register
+│   ├── AuthControllerIT.java              # Tests d'intégration : login, register
+│   ├── SessionControllerIT.java           # Tests d'intégration : CRUD sessions, participation
+│   ├── TeacherControllerIT.java           # Tests d'intégration : lecture enseignants
+│   ├── UserControllerIT.java              # Tests d'intégration : lecture, suppression compte
+│   └── GlobalExceptionHandlerTest.java    # Tests unitaires : codes HTTP des exceptions
+│
+├── service/
+│   ├── SessionServiceTest.java            # Tests unitaires : logique métier sessions
+│   ├── TeacherServiceTest.java            # Tests unitaires : logique métier enseignants
+│   └── UserServiceTest.java               # Tests unitaires : logique métier utilisateurs
+│
+├── mapper/
+│   ├── SessionMapperTest.java             # Tests unitaires : mapping SessionDto ↔ Session
+│   ├── TeacherMapperTest.java             # Tests unitaires : mapping TeacherDto ↔ Teacher
+│   └── UserMapperTest.java                # Tests unitaires : mapping UserDto ↔ User
+│
+└── security/
+    ├── JwtUtilsTest.java                  # Tests unitaires : génération et validation JWT
+    ├── AuthTokenFilterTest.java           # Tests unitaires : filtre d'authentification HTTP
+    ├── AuthEntryPointJwtTest.java         # Tests unitaires : réponse 401 non autorisé
+    ├── UserDetailsImplTest.java           # Tests unitaires : UserDetails Spring Security
+    └── UserDetailsServiceImplTest.java    # Tests unitaires : chargement utilisateur par email
+```
