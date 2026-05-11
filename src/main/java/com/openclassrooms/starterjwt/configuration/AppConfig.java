@@ -1,17 +1,12 @@
 package com.openclassrooms.starterjwt.configuration;
 
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
-import org.springframework.core.io.FileSystemResource;
 
+/**
+ * Application configuration.
+ * Properties are loaded from application.properties / environment variables.
+ */
 @Configuration
 public class AppConfig {
-
-    @Bean
-    public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
-        PropertySourcesPlaceholderConfigurer configurer = new PropertySourcesPlaceholderConfigurer();
-        configurer.setLocation(new FileSystemResource(".env"));
-        return configurer;
-    }
+    // No-op: properties are read from application.properties or env vars
 }
